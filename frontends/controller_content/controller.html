@@ -1,0 +1,374 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>Dart Control</title>
+	<link rel="icon" type="image/x-icon" href="favicon.ico">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;900&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
+    <style>
+        html, body {
+            height: 100%;
+            margin: 0;
+            padding: 0;
+            overflow: hidden; /* Prevent pull-to-refresh, body scroll */
+            -webkit-tap-highlight-color: transparent; /* Remove tap highlight on iOS/Android */
+        }
+        body {
+            font-family: 'Inter', sans-serif;
+            overscroll-behavior-y: contain; /* More specific overscroll behavior */
+            background-color: #0f172a; /* Tailwind slate-900 - a bit richer */
+            color: #f1f5f9; /* Tailwind slate-100 */
+            display: flex;
+            flex-direction: column;
+        }
+        #controller_root {
+            height: 100%;
+            width: 100%;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden; /* Ensure root doesn't cause scroll */
+        }
+        .game-title-font {
+            font-family: 'Press Start 2P', cursive;
+        }
+
+        /* Keypad Styles - Adjusted for better fit (from previous context, might need further tweaks if Keypad component is used elsewhere) */
+        .keypad-overlay {
+            position: fixed;
+            inset: 0;
+            background-color: rgba(0,0,0,0.85);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 60;
+            padding: 0.5rem;
+        }
+        .keypad {
+            background-color: #1e293b; /* slate-800 */
+            padding: 0.75rem;
+            border-radius: 0.5rem;
+            box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1), 0 4px 6px -2px rgba(0,0,0,0.05);
+            width: 90%;
+            min-width: 270px;
+            max-width: 320px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 0.35rem;
+            max-height: 95vh;
+            overflow-y: auto;
+            box-sizing: border-box;
+            border: 1px solid #334155; /* slate-700 */
+        }
+        .keypad > h3 {
+            width: 100%;
+            text-align: center;
+            font-size: 1.125rem;
+            line-height: 1.5rem;
+            margin-bottom: 0.35rem;
+            font-weight: 600;
+            color: #f1f5f9; /* slate-100 */
+        }
+        .keypad-children-wrapper {
+            width: 100%;
+            margin-bottom: 0.35rem;
+            font-size: 0.875rem;
+            line-height: 1.25rem;
+            text-align: center;
+            color: #cbd5e1; /* slate-300 */
+        }
+        .keypad-display {
+            background-color: #334155; /* slate-700 */
+            color: white;
+            text-align: right;
+            padding: 0.4rem 0.6rem;
+            font-size: 1.375rem;
+            border-radius: 0.375rem;
+            min-height: 44px;
+            box-sizing: border-box;
+            word-break: break-all;
+            width: 100%;
+        }
+        .keypad-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 0.35rem;
+            width: 100%;
+            box-sizing: border-box;
+        }
+        .keypad-button {
+            background-color: #475569; /* slate-600 */
+            color: white;
+            font-size: 1rem;
+            padding: 0.4rem;
+            border-radius: 0.375rem;
+            text-align: center;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 100%;
+            aspect-ratio: 1 / 1;
+            box-sizing: border-box;
+            cursor: pointer;
+            font-weight: 600;
+        }
+        .keypad-button:hover {
+            background-color: #64748b; /* slate-500 */
+        }
+        .keypad-button.action, .keypad-button.cancel {
+            aspect-ratio: auto;
+            padding: 0.5rem 0.75rem;
+            font-size: 0.95rem;
+        }
+        .keypad-button.action {
+            background-color: #10B981; /* green-500 */
+        }
+        .keypad-button.action:hover {
+            background-color: #059669; /* green-600 */
+        }
+        .keypad-button.cancel {
+            background-color: #EF4444; /* red-500 */
+        }
+        .keypad-button.cancel:hover {
+            background-color: #DC2626; /* red-600 */
+        }
+        .keypad-actions-container {
+            display: flex;
+            justify-content: space-between;
+            gap: 0.35rem;
+            width: 100%;
+            margin-top: 0.35rem;
+        }
+        /* Custom Scrollbar for controller if needed */
+        .custom-scrollbar::-webkit-scrollbar { width: 5px; }
+        .custom-scrollbar::-webkit-scrollbar-track { background: #1e293b; /* slate-800 */ }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: #475569; /* slate-600 */ border-radius: 3px; }
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: #64748b; /* slate-500 */ }
+
+        /* Styles for Touch-Friendly Manage Players Screen */
+        .manage-players-container {
+            padding: 1rem; /* Equivalent to p-4 */
+            display: flex;
+            flex-direction: column;
+            height: 100%; /* Ensure it takes full height within its parent */
+            box-sizing: border-box;
+        }
+        .manage-players-header {
+            font-family: 'Press Start 2P', cursive;
+            color: #fde047; /* amber-300 */
+            text-shadow: 0 0 2px #fde047, 0 0 5px #fde047, 0 0 8px #facc15, 0 0 12px #eab308;
+            margin-bottom: 1.5rem; /* mb-6 */
+            text-align: center;
+        }
+        .manage-players-actions {
+            margin-bottom: 1.5rem; /* mb-6 */
+            display: flex;
+            flex-direction: column; /* Stack buttons on mobile */
+            gap: 0.75rem; /* gap-3 */
+        }
+        @media (min-width: 640px) { /* sm breakpoint */
+            .manage-players-actions {
+                flex-direction: row; /* Row layout on larger screens */
+                justify-content: center;
+            }
+        }
+        .manage-players-button {
+            padding: 0.75rem 1rem; /* py-3 px-4 */
+            border-radius: 0.5rem; /* rounded-lg */
+            font-weight: 600; /* font-semibold */
+            text-align: center;
+            transition: background-color 0.2s;
+            width: 100%; /* Full width for stacked buttons */
+        }
+        @media (min-width: 640px) { /* sm breakpoint */
+             .manage-players-button {
+                width: auto; /* Auto width for row layout */
+             }
+        }
+        .manage-players-list-container {
+            background-color: #1e293b; /* slate-800 */
+            padding: 1rem; /* p-4 */
+            border-radius: 0.5rem; /* rounded-lg */
+            box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1), 0 2px 4px -1px rgba(0,0,0,0.06); /* shadow-lg */
+            flex-grow: 1; /* Allow list to take remaining space */
+            overflow-y: auto; /* Enable scrolling for the list */
+            border: 1px solid #334155; /* slate-700 */
+        }
+        .manage-players-list-item {
+            background-color: #334155; /* slate-700 */
+            padding: 1rem; /* p-4, increased padding for touch */
+            border-radius: 0.375rem; /* rounded-md */
+            margin-bottom: 0.75rem; /* mb-3 */
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border: 1px solid #475569; /* slate-600 */
+        }
+        .manage-players-list-item:last-child {
+            margin-bottom: 0;
+        }
+        .manage-players-list-item-name {
+            font-weight: 500; /* font-medium */
+            color: #e2e8f0; /* slate-200 */
+            font-size: 1.125rem; /* text-lg */
+            word-break: break-word; /* Prevent long names from breaking layout */
+            margin-right: 0.5rem; /* Add some space before buttons */
+        }
+        .manage-players-list-item .team-members-display { /* Added class for styling */
+            font-size: 0.875rem; /* text-sm */
+            color: #94a3b8; /* slate-400 */
+            margin-left: 0.5rem;
+        }
+        .manage-players-list-item-actions button {
+            padding: 0.5rem 0.75rem; /* py-2 px-3, increased for touch */
+            font-size: 0.875rem; /* text-sm */
+            margin-left: 0.5rem; /* ml-2 */
+            border-radius: 0.375rem; /* rounded-md */
+            font-weight: 500;
+        }
+        .manage-players-footer-actions {
+            margin-top: 2rem; /* mt-8 */
+            display: flex;
+            flex-direction: column; /* Stack buttons on mobile */
+            gap: 0.75rem; /* gap-3 */
+        }
+         @media (min-width: 640px) { /* sm breakpoint */
+            .manage-players-footer-actions {
+                flex-direction: row;
+                justify-content: center;
+            }
+        }
+
+        /* Modal Styles for PlayerForm - Touch Friendly */
+        .player-form-modal-content {
+            background-color: #1e293b; /* slate-800 */
+            padding: 1.5rem; /* p-6 */
+            border-radius: 0.5rem; /* rounded-lg */
+            box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1), 0 4px 6px -2px rgba(0,0,0,0.05);
+            max-height: 90vh;
+            overflow-y: auto;
+            width: 100%;
+            max-width: 500px; /* md:max-w-md */
+            border: 1px solid #334155; /* slate-700 */
+        }
+        .player-form-modal-content h3 {
+             font-family: 'Press Start 2P', cursive;
+             color: #fde047; /* amber-300 */
+             margin-bottom: 1.5rem; /* mb-6 */
+             text-align: center;
+        }
+        .player-form-modal-content label {
+            display: block;
+            font-size: 0.875rem; /* text-sm */
+            font-weight: 500; /* font-medium */
+            color: #cbd5e1; /* slate-300 */
+            margin-bottom: 0.25rem; /* mb-1 */
+        }
+        .player-form-modal-content input[type="text"] {
+            margin-top: 0.25rem; /* mt-1 */
+            display: block;
+            width: 100%;
+            background-color: #334155; /* slate-700 */
+            border: 1px solid #475569; /* slate-600 */
+            border-radius: 0.375rem; /* rounded-md */
+            box-shadow: inset 0 1px 2px rgba(0,0,0,0.075);
+            padding: 0.75rem 1rem; /* py-3 px-4 for larger touch area */
+            font-size: 1rem; /* text-base */
+            color: #f1f5f9; /* slate-100 */
+        }
+        .player-form-modal-content input[type="text"]:focus {
+            outline: 2px solid transparent;
+            outline-offset: 2px;
+            border-color: #60a5fa; /* blue-400 */
+            box-shadow: 0 0 0 3px rgba(96, 165, 250, 0.3); /* focus:ring-blue-500 focus:border-blue-500 */
+        }
+        .player-form-modal-actions {
+            padding-top: 1.25rem; /* pt-5 */
+            display: flex;
+            justify-content: flex-end;
+            gap: 0.75rem; /* space-x-3 */
+        }
+        .player-form-modal-actions button {
+            padding: 0.625rem 1.25rem; /* py-2.5 px-5 for larger buttons */
+            border-radius: 0.375rem; /* rounded-md */
+            font-weight: 600; /* font-semibold */
+        }
+
+        /* --- BEGIN ADDED ARCADE STYLES for 501.js --- */
+        /* Ensure @import for 'Press Start 2P' is at the top if not already present */
+        /* @import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap'); */
+
+        .font-arcade-main {
+          font-family: 'Press Start 2P', cursive;
+          text-transform: uppercase;
+          letter-spacing: 0.05em;
+        }
+
+        .animate-fade-in-pop {
+          animation: fadeInPopAnimation 0.3s ease-out forwards;
+        }
+
+        @keyframes fadeInPopAnimation {
+          0% {
+            opacity: 0;
+            transform: scale(0.9);
+          }
+          100% {
+            opacity: 1;
+            transform: scale(1);
+          }
+        }
+
+        .animate-subtle-pulse { /* For winner card background and leader icon */
+          animation: subtlePulseAnimation 2s infinite ease-in-out;
+        }
+
+        @keyframes subtlePulseAnimation {
+          0%, 100% {
+            transform: scale(1);
+            opacity: 1;
+          }
+          50% {
+            transform: scale(1.05);
+            opacity: 0.85;
+          }
+        }
+
+        .animate-outer-pulse { /* For pulsating border on current player */
+          animation: outerPulseAnimation 2s infinite;
+        }
+
+        @keyframes outerPulseAnimation {
+          0% { box-shadow: 0 0 0 0px rgba(129, 140, 248, 0.7); } /* Tailwind indigo-400 at 70% opacity */
+          70% { box-shadow: 0 0 0 10px rgba(129, 140, 248, 0); }
+          100% { box-shadow: 0 0 0 0px rgba(129, 140, 248, 0); }
+        }
+        /* --- END ADDED ARCADE STYLES for 501.js --- */
+
+    </style>
+</head>
+<body>
+    <div id="controller_root"></div>
+
+    <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
+
+    <script type="text/babel" src="keypad_component.js"></script>
+
+    <script src="./games/beers.js" type="text/babel"></script>
+    <script src="./games/cricket.js" type="text/babel"></script>
+    <script src="./games/501.js" type="text/babel"></script>
+    <script src="./games/three_friendly_flights.js" type="text/babel"></script>
+    <script src="./games/around_the_world.js" type="text/babel"></script>
+    <script src="./games/killer.js" type="text/babel"></script>
+    <script src="./games/golf.js" type="text/babel"></script>
+    <script src="./games/baseball.js" type="text/babel"></script>
+
+    <script type="text/babel" src="controller_app.js"></script>
+</body>
+</html>

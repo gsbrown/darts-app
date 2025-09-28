@@ -1,0 +1,398 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dart Display</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;900&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            overscroll-behavior: none;
+            background-color: #0c0a09; /* Even darker background - neutral-950 */
+            color: #f3f4f6; /* Tailwind gray-100 */
+            margin: 0;
+            padding: 0;
+            height: 100vh;
+            overflow: hidden; /* Prevent body scroll, main area will scroll */
+        }
+        #root {
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+        }
+        main {
+            flex-grow: 1;
+            overflow-y: auto; /* Allow main content to scroll */
+            padding-top: 5rem; /* Increased padding for larger header */
+            padding-bottom: 7rem; /* Increased padding for footer + action buttons */
+        }
+        header.fixed {
+            height: auto; /* Let content define height */
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            z-index: 40;
+        }
+        footer.fixed {
+            height: auto; /* Let content define height */
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            z-index: 30; /* Footer z-index */
+        }
+
+        .game-title-font {
+            font-family: 'Press Start 2P', cursive;
+        }
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar { width: 8px; }
+        ::-webkit-scrollbar-track { background: #1c1917; /* neutral-900 */ }
+        ::-webkit-scrollbar-thumb { background: #44403c; /* neutral-700 */ border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #57534e; /* neutral-600 */ }
+        /* Focus visible for accessibility */
+        *:focus-visible { outline: 2px solid #2563eb; /* blue-600 */ outline-offset: 2px; }
+
+        /* Modal Styles */
+        .modal-overlay { position: fixed; inset: 0; background-color: rgba(0,0,0,0.85); display: flex; align-items: center; justify-content: center; z-index: 50; padding: 1rem;}
+        .modal-content { background-color: #1c1917; /* neutral-900 */ padding: 1.5rem; border-radius: 0.5rem; box-shadow: 0 25px 50px -12px rgba(0,0,0,0.45); max-height: 90vh; overflow-y: auto; width: 100%; max-width: 500px; border: 1px solid #44403c; }
+
+        /* General Button Styling (can be overridden by Tailwind classes) */
+        button, input[type="button"], input[type="submit"], .clickable { padding: 0.75rem 1.5rem; border-radius: 0.375rem; font-weight: 600; cursor: pointer; transition: all 0.2s ease-in-out; }
+        button:active, .clickable:active { transform: scale(0.97); }
+
+        /* Neon Glow Effect for Titles - Sharper Version */
+        .neon-text-yellow {
+            color: #fde047; /* yellow-300 */
+            text-shadow:
+                0 0 2px #fde047,
+                0 0 3px #fde047,
+                0 0 4px #facc15, /* yellow-400 */
+                0 0 3px #eab308; /* yellow-500 */
+        }
+        .neon-text-blue {
+            color: #7dd3fc; /* sky-300 */
+            text-shadow:
+                0 0 2px #7dd3fc,
+                0 0 3px #7dd3fc,
+                0 0 4px #38bdf8, /* sky-400 */
+                0 0 3px #0ea5e9; /* sky-500 */
+        }
+
+        /* Cricket Styles */
+        .cricket-game-area { padding:0.5rem; width:100%; display:flex; flex-direction:column; align-items:center; }
+        .cricket-board-grid { display:grid; gap:0.5rem; width:100%; max-width:98vw; margin:auto; }
+        .cricket-cell { padding:0.25rem; border-radius:0.5rem; text-align:center; font-weight:bold; display:flex; flex-direction:column; align-items:center; justify-content:center; box-sizing:border-box; overflow:hidden; }
+        .cricket-player-header { background-color:#404040; color:white; min-height:190px; transition:box-shadow 0.3s ease-in-out, border-color 0.3s ease-in-out; border: 2px solid #525252;}
+        .leader-highlight { border-color:#facc15; box-shadow:0 0 15px rgba(250,204,21,0.7); }
+        .cricket-player-header .player-name { font-size:2.5rem; margin-bottom:0.25rem; word-break:break-word; line-height:1.1; color: #eab308; }
+        .cricket-player-header .player-score { font-size:5.5rem; line-height:1; color: #fde047; }
+        .cricket-objective-label { background-color:#171717; color:#facc15; font-size:3.5rem; min-height:140px; border: 2px solid #262626;}
+        .cricket-player-mark-cell { background-color:#262626; color:white; cursor:pointer; transition:background-color 0.2s, border-color 0.2s; border:3px solid transparent; min-height:140px; }
+        .cricket-player-mark-cell:hover { background-color:#404040; }
+        .cricket-mark-display { font-size:5.5rem; color:#a1a1aa; line-height:1; min-width:80px; display:flex; justify-content:center; align-items:center; }
+        .mark-display-closed { color:#f43f5e; font-weight:900; } /* rose-500 */
+        .player-objective-closed-by-player { border-color:#10b981; } /* green-500 */
+        .cricket-objective-fully-closed { opacity:0.6; cursor:default; }
+        .cricket-objective-fully-closed.player-objective-closed-by-player { border-color:#ef4444; } /* red-500 for emphasis */
+        .cricket-blank-slot { min-height:140px; border:3px solid transparent; }
+        .cricket-blank-header-slot { min-height:190px; border:3px solid transparent; }
+        .player-team-members { font-size: 1.25rem; color: #a1a1aa; margin-top: 0.5rem; font-weight: normal; }
+
+
+        /* 501 Styles */
+        .five01-game-area { padding:1rem; width:100%; display:flex; flex-direction:column; align-items:center; position:relative; }
+        .five01-player-card-portrait { background-color:#1c1917; color:white; border-radius:0.75rem; border:3px solid #44403c; transition:border-color 0.3s, box-shadow 0.3s, transform 0.2s ease-out; display:flex; flex-direction:row; align-items:stretch; position:relative; }
+        .five01-player-card-portrait.current-turn-participant { border-color:#facc15; box-shadow:0 0 25px rgba(250,204,21,0.8), 0 0 12px rgba(253,224,71,0.6) inset; transform:scale(1.02); z-index:5; }
+        .five01-player-name-portrait { line-height:1.1; font-weight:700; color:#e5e7eb; margin-bottom:0.25rem; word-break:break-word; }
+        .five01-player-score-portrait { line-height:1; font-weight:900; color:#fde047; }
+        
+
+        /* 3FF Styles */
+        .threeff-game-area-grid { padding:0.5rem; width:100%; display:flex; flex-direction:column; align-items:center; }
+        .threeff-board-grid { display:grid; gap:0.5rem; width:100%; max-width:98vw; margin:auto; }
+        .threeff-cell { border-radius:0.5rem; text-align:center; font-weight:bold; display:flex; flex-direction:column; align-items:center; justify-content:center; box-sizing:border-box; overflow:hidden; }
+        .threeff-player-header-cell { background-color:#404040; color:white; min-height:160px; padding:0.75rem; transition:box-shadow 0.3s ease-in-out, border-color 0.3s ease-in-out; border: 2px solid #525252;}
+        .threeff-player-header-cell.current-turn-participant { border:3px solid #facc15; box-shadow:0 0 15px rgba(250,204,21,0.6); }
+        .threeff-player-name-display { font-size:2.25rem; line-height:1.1; margin-bottom:0.25rem; word-break:break-word; color: #eab308;}
+        .threeff-player-score-display { font-size:4.5rem; line-height:1; color: #fde047; }
+        
+
+        /* Other general styles */
+        .confetti-piece { position: absolute; border-radius: 50%; animation: fall linear infinite; }
+        @keyframes fall { 0% { transform: translateY(-10vh) rotate(0deg); opacity: 1; } 100% { transform: translateY(110vh) rotate(720deg); opacity: 0; } }
+        @keyframes pop-in { 0% { transform: scale(0.5) translateY(20px); opacity: 0; } 100% { transform: scale(1) translateY(0px); opacity: 1; } }
+        .animate-pop-in { animation: pop-in 0.5s cubic-bezier(0.68, -0.55, 0.27, 1.55) forwards; }
+
+    </style>
+</head>
+<body class="bg-neutral-950 text-white">
+    <div id="root"></div>
+
+    <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
+
+    <script src="killer.js" type="text/babel"></script>
+    <script src="cricket.js" type="text/babel"></script>
+    <script src="501.js" type="text/babel"></script>
+    <script src="three_friendly_flights.js" type="text/babel"></script>
+    <script src="around_the_world.js" type="text/babel"></script>
+    <script src="beers.js" type="text/babel"></script>
+    <script src="golf.js" type="text/babel"></script>
+    <script src="baseball.js" type="text/babel"></script>
+
+    <script type="text/babel">
+        // REVAMPED: Main Display React Application
+        // Simplified to remove player setup and management, which are now controller-driven.
+        // Game components updated to display new team format.
+
+        if (typeof React === 'undefined') {
+            document.body.innerHTML = '<h1 style="color:red;text-align:center;margin-top:50px;">Error: React library not loaded.</h1>';
+            throw new Error("React not loaded");
+        }
+
+        // --- Helper Functions & Constants ---
+        const IconPlaceholder = ({ emoji, size = 64, className = "", iconClassName = "" }) => (
+            <span className={`${className}`} style={{ fontSize: `${size}px`, lineHeight: '1' }}>
+                <span className={iconClassName}>{emoji || "❓"}</span>
+            </span>
+        );
+        // This checks if the page is loaded securely (https) via Cloudflare
+        // and constructs the appropriate WebSocket URL (wss://) to match.
+        const isSecure = window.location.protocol === 'https:';
+        const wsProtocol = isSecure ? 'wss://' : 'ws://';
+        const SOCKET_SERVER_URL = `${wsProtocol}${window.location.host}`;
+
+        // --- Game Mode Definitions (used for display info) ---
+        const GAME_MODES = {
+            CRICKET: { id: 'CRICKET', name: 'Cricket', description: 'Close out B, T, D, 20-15. Score on open numbers.', iconEmoji: "🎯", component: 'CricketGame' },
+            THREE_FF: { id: 'THREE_FF', name: '3 Friendly Flights', description: 'Hit objectives, score points, or get halved!', iconEmoji: "🎲", component: 'ThreeFriendlyFlightsGame' },
+            FIVE_ZERO_ONE: { id: 'FIVE_ZERO_ONE', name: '501', description: 'Race from 501 to 0. Double-in and Double-out required.', iconEmoji: "🏁", component: 'FiveZeroOneGame' },
+            AROUND_THE_WORLD: { id: 'AROUND_THE_WORLD', name: 'Around The World', description: 'Hit 1-20, SB, DB. Report highest number hit.', iconEmoji: "🌍", component: 'AroundTheWorldGame' },
+            BEERS: { id: 'BEERS', name: 'BEERS', description: 'Beat the previous player\'s score (High or Low).', iconEmoji: "🍺", component: 'BeersGame' },
+            GOLF: { id: 'GOLF', name: 'Golf', description: 'Play 18 holes (numbers 1-18). Aim for the lowest score.', iconEmoji: "⛳", component: 'GolfGame' },
+            BASEBALL: { id: 'BASEBALL', name: 'Baseball', description: 'Play 9 innings (numbers 1-9). Score "runs".', iconEmoji: "⚾", component: 'BaseballGame' },
+            KILLER: { id: 'KILLER', name: 'Killer', description: 'Claim your number, become a Killer, eliminate targets.', iconEmoji: "🔪", component: 'KillerGame' },
+        };
+
+        // --- Reusable UI Components ---
+        const GameOverScreen = ({ winner, onDismiss }) => {
+            if (!winner) return null;
+            React.useEffect(() => {
+                const confettiContainer = document.getElementById('confetti-container-main');
+                if (!confettiContainer || confettiContainer.children.length > 0) return;
+                const confettiCount = 150; const colors = ["#fde047", "#facc15", "#eab308", "#0ea5e9", "#38bdf8", "#7dd3fc", "#f43f5e", "#ec4899"];
+                for (let i = 0; i < confettiCount; i++) {
+                    const confetti = document.createElement('div'); confetti.classList.add('confetti-piece');
+                    confetti.style.left = Math.random() * 100 + 'vw'; confetti.style.animationDelay = (Math.random() * 4) + 's';
+                    confetti.style.animationDuration = (Math.random() * 3 + 4) + 's';
+                    confetti.style.backgroundColor = colors[Math.floor(Math.random() * colors.length)];
+                    const size = (Math.random() * 10 + 5) + 'px'; confetti.style.width = size; confetti.style.height = size;
+                    confetti.style.opacity = Math.random() * 0.6 + 0.4; confetti.style.transform = `rotate(${Math.random() * 360}deg)`;
+                    confettiContainer.appendChild(confetti);
+                }
+                return () => { if (confettiContainer) confettiContainer.innerHTML = ''; };
+            }, [winner]);
+            const winnerDisplayName = winner.name || "Unknown Winner";
+            return (<div className="fixed inset-0 w-screen h-screen bg-black bg-opacity-90 flex flex-col items-center justify-center z-[100] p-4"><div id="confetti-container-main" style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', overflow: 'hidden', pointerEvents: 'none' }}></div><div className="bg-neutral-800 p-8 sm:p-12 md:p-16 rounded-2xl shadow-2xl text-center relative animate-pop-in max-w-3xl w-full border-4 border-amber-400"><h1 className="text-6xl sm:text-8xl md:text-9xl font-black game-title-font neon-text-yellow mb-6 sm:mb-8">GAME OVER!</h1><div className="mb-8 sm:mb-10"><IconPlaceholder emoji="🏆" size={120} className="text-amber-300 mb-4 sm:mb-6 inline-block" /><p className="text-2xl sm:text-3xl text-gray-200 mb-2 sm:mb-3">Winner:</p><p className="text-5xl sm:text-6xl md:text-7xl font-bold text-sky-400 game-title-font break-words px-2 leading-tight neon-text-blue">{winnerDisplayName}</p>{winner.score !== undefined && <p className="text-2xl sm:text-3xl text-gray-200 mt-4 sm:mt-5">Score: <span className="font-bold text-white">{winner.score}</span></p>}</div><button onClick={onDismiss} className="bg-sky-600 hover:bg-sky-700 text-white font-bold py-4 sm:py-5 px-10 sm:px-12 rounded-lg text-2xl sm:text-3xl game-title-font shadow-lg transition-transform hover:scale-105 focus:outline-none focus:ring-2 focus:ring-sky-400 focus:ring-opacity-75">OK</button></div></div>);
+        };
+        
+        const GameSelection = () => {
+             return (
+                <div className="flex flex-col items-center justify-center min-h-screen p-4 sm:p-6 md:p-8">
+                    <h1 className="text-5xl sm:text-6xl md:text-7xl font-black mb-10 sm:mb-12 game-title-font text-center neon-text-yellow tracking-wider">
+                        Dart Scorer
+                    </h1>
+                     <div className="text-center max-w-3xl">
+                        <p className="text-2xl text-slate-300 mb-4">Welcome!</p>
+                        <p className="text-3xl text-slate-100 font-semibold mb-8">Please use the controller device to select a game and set up players.</p>
+                        <IconPlaceholder emoji="🎯" size={120} className="text-sky-400" />
+                     </div>
+                </div>
+            );
+        };
+        
+        const StatsScreenDisplay = ({ stats, onBack }) => {
+            const StatList = ({ title, data, type }) => {
+                const sortedData = Object.entries(data || {}).sort(([, a], [, b]) => b - a);
+                return (
+                    <div className="bg-neutral-900 p-6 rounded-xl shadow-inner border-2 border-neutral-800">
+                        <h3 className="text-4xl font-bold game-title-font text-amber-300 mb-6 border-b-4 border-neutral-700 pb-3 neon-text-yellow">{title}</h3>
+                        {sortedData.length === 0 ? (
+                            <p className="text-neutral-400 italic text-xl">No {type} wins recorded yet.</p>
+                        ) : (
+                            <ul className="space-y-4">
+                                {sortedData.map(([name, wins]) => (
+                                    <li key={name} className="flex justify-between items-center bg-neutral-800 p-4 rounded-lg">
+                                        <span className="font-semibold text-3xl text-slate-100 truncate pr-4">{name}</span>
+                                        <span className="text-3xl font-bold text-sky-300 bg-neutral-900 px-4 py-2 rounded-md neon-text-blue">{`${wins} Win${wins > 1 ? 's' : ''}`}</span>
+                                    </li>
+                                ))}
+                            </ul>
+                        )}
+                    </div>
+                );
+            };
+
+            return (
+                <div className="p-8 h-full flex flex-col">
+                    <h2 className="text-7xl font-bold game-title-font text-center text-purple-400 mb-10 neon-text-yellow" style={{textShadow: '0 0 8px #c084fc'}}>Statistics</h2>
+                    <div className="flex-grow overflow-y-auto custom-scrollbar pr-4 space-y-10">
+                        <div>
+                            <h3 className="text-5xl font-bold game-title-font text-center text-sky-400 mb-6 neon-text-blue">Session Stats</h3>
+                            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                                <StatList title="Team Wins" data={stats.sessionStats.teams} type="team" />
+                                <StatList title="Player Wins" data={stats.sessionStats.players} type="player" />
+                            </div>
+                        </div>
+                        <div>
+                            <h3 className="text-5xl font-bold game-title-font text-center text-sky-400 mb-6 neon-text-blue">All-Time Stats</h3>
+                            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                                <StatList title="Team Wins" data={stats.historicalStats.teams} type="team" />
+                                <StatList title="Player Wins" data={stats.historicalStats.players} type="player" />
+                            </div>
+                        </div>
+                    </div>
+                    <div className="mt-10 text-center">
+                        <button onClick={onBack} className="bg-slate-600 hover:bg-slate-500 text-white font-bold py-4 px-10 rounded-lg shadow-lg text-2xl game-title-font">
+                            OK
+                        </button>
+                    </div>
+                </div>
+            );
+        };
+
+        const gameComponentRegistry = {};
+
+        // --- Main App Component ---
+        const App = () => {
+            const [currentView, setCurrentView] = React.useState('gameSelection');
+            const [activeGame, setActiveGame] = React.useState(null);
+            const [socket, setSocket] = React.useState(null);
+            const [connectionStatus, setConnectionStatus] = React.useState('Initializing...');
+            const [gameState, setGameState] = React.useState(null);
+            const [stats, setStats] = React.useState({ sessionStats: { teams: {}, players: {} }, historicalStats: { teams: {}, players: {} } });
+            
+            // Ref to hold the current view to prevent stale closures in socket handlers
+            const viewRef = React.useRef(currentView);
+            React.useEffect(() => { viewRef.current = currentView; }, [currentView]);
+
+            // Initialize gameComponentRegistry once
+            React.useEffect(() => {
+                 Object.values(GAME_MODES).forEach(mode => {
+                    if (mode.component && typeof window[mode.component] !== 'undefined') {
+                        gameComponentRegistry[mode.component] = window[mode.component];
+                    } else if (mode.component) {
+                        console.warn(`Game component ${mode.component} not found on window object.`);
+                    }
+                });
+            }, []);
+
+            const transitionToMenu = React.useCallback(() => {
+                setActiveGame(null);
+                setGameState(null);
+                setCurrentView('gameSelection');
+            }, []);
+
+            // Effect for initializing and managing the socket connection
+            React.useEffect(() => {
+                const newSocket = io(SOCKET_SERVER_URL);
+                setSocket(newSocket);
+
+                newSocket.on('connect', () => {
+                    setConnectionStatus('Connected');
+                    newSocket.emit('requestGameState');
+                    newSocket.emit('requestStats');
+                });
+                newSocket.on('disconnect', () => setConnectionStatus('Disconnected'));
+                newSocket.on('connect_error', () => setConnectionStatus(`Error`));
+
+                const handleGameStateUpdate = (s) => {
+                    setGameState(s);
+                    if (s && s.mode) {
+                        const gameModeDetails = Object.values(GAME_MODES).find(g => g.id === s.mode.toUpperCase());
+                        if (gameModeDetails) {
+                            setActiveGame(gameModeDetails);
+                            setCurrentView('activeGame');
+                        }
+                    } else if (s === null && viewRef.current !== 'stats') {
+                        transitionToMenu();
+                    }
+                };
+                
+                newSocket.on('gameState', handleGameStateUpdate);
+                newSocket.on('gameStateUpdate', handleGameStateUpdate);
+                newSocket.on('noGameActive', () => handleGameStateUpdate(null));
+                newSocket.on('statsUpdate', (newStats) => setStats(newStats));
+                newSocket.on('displayStatsScreen', () => setCurrentView('stats'));
+
+                return () => { newSocket.disconnect(); };
+            }, [transitionToMenu]);
+
+
+            const renderCurrentView = () => {
+                switch (currentView) {
+                    case 'activeGame':
+                        if (!gameState || !activeGame) return <div className="text-center p-8 text-xl animate-pulse text-yellow-300">Syncing Game...</div>;
+                        const SpecificGameView = gameComponentRegistry[activeGame.component];
+                        return SpecificGameView
+                            ? <SpecificGameView gameMode={activeGame} socket={socket} gameState={gameState} displayRole="display" sessionStats={stats.sessionStats} />
+                            : <div className="text-center p-8 text-2xl text-red-500 font-bold">Component for {activeGame.name} not found.</div>;
+                    case 'stats':
+                        return <StatsScreenDisplay stats={stats} onBack={transitionToMenu} />;
+                    case 'gameSelection':
+                    default:
+                        return <GameSelection />;
+                }
+            };
+            
+            let statusIndicatorColor = 'bg-yellow-500';
+            if (connectionStatus === 'Connected') statusIndicatorColor = 'bg-green-500';
+            else if (connectionStatus.startsWith('Disconnected') || connectionStatus.startsWith('Error')) statusIndicatorColor = 'bg-red-500';
+            
+            return (
+                <div id="root-container" className="min-h-screen w-full flex flex-col bg-neutral-950">
+                    <header className="p-3 sm:p-4 bg-neutral-900 shadow-lg fixed top-0 left-0 right-0 z-40 border-b-2 border-neutral-800">
+                        <div className="container mx-auto flex justify-between items-center px-2 sm:px-4">
+                            <div className="text-2xl sm:text-3xl font-bold game-title-font flex items-center neon-text-yellow">
+                                {activeGame ? activeGame.name : "Dart Display"}
+                            </div>
+                            <div
+                                title={connectionStatus}
+                                className={`text-xs sm:text-sm px-3 sm:px-4 py-1.5 rounded-full ${statusIndicatorColor} text-white font-semibold shadow-md truncate max-w-[100px] sm:max-w-[150px] transition-colors`}
+                            >
+                                {connectionStatus}
+                            </div>
+                        </div>
+                    </header>
+                    <main className="flex-grow w-full">
+                        {renderCurrentView()}
+                    </main>
+                    {gameState && gameState.gameOver && gameState.winner && (
+                        <GameOverScreen winner={gameState.winner} onDismiss={transitionToMenu} />
+                    )}
+                    <footer className="p-3 sm:p-4 bg-neutral-900 text-neutral-400 text-xs sm:text-sm border-t border-neutral-800 fixed bottom-0 left-0 right-0 z-30">
+                        <div className="container mx-auto flex flex-col md:flex-row justify-between items-center text-center gap-2 px-4">
+                            <div className="text-base font-semibold text-amber-400 order-first md:order-none">
+                                <span>Controller URL: </span>
+                                <span className="font-mono tracking-wider">{window.location.hostname}:8442</span>
+                            </div>
+                            <div className="text-neutral-500">
+                                &copy; {new Date().getFullYear()} Dart Display App
+                            </div>
+                        </div>
+                    </footer>
+                </div>
+            );
+        };
+
+        ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+    </script>
+</body>
+</html>

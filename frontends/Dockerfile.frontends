@@ -1,0 +1,38 @@
+# Use a lightweight Nginx image
+FROM nginx:stable-alpine
+
+# Remove default Nginx configuration
+RUN rm /etc/nginx/conf.d/default.conf
+
+# Copy your custom Nginx configuration
+COPY nginx.conf /etc/nginx/conf.d/default.conf
+
+# --- CORRECTED FILE COPYING (V2) ---
+# Copy ONLY the necessary files for the display to its specific folder.
+# This prevents including nested duplicate directories that caused the original error.
+COPY display_content/index.html /usr/share/nginx/html/display_content/
+COPY display_content/501.js /usr/share/nginx/html/display_content/
+COPY display_content/around_the_world.js /usr/share/nginx/html/display_content/
+COPY display_content/baseball.js /usr/share/nginx/html/display_content/
+COPY display_content/beers.js /usr/share/nginx/html/display_content/
+COPY display_content/cricket.js /usr/share/nginx/html/display_content/
+COPY display_content/golf.js /usr/share/nginx/html/display_content/
+COPY display_content/killer.js /usr/share/nginx/html/display_content/
+COPY display_content/three_friendly_flights.js /usr/share/nginx/html/display_content/
+COPY display_content/favicon.ico /usr/share/nginx/html/display_content/
+
+# Copy ONLY the necessary files for the controller to its specific folder.
+COPY controller_content/controller.html /usr/share/nginx/html/controller_content/
+COPY controller_content/controller_app.js /usr/share/nginx/html/controller_content/
+COPY controller_content/keypad_component.js /usr/share/nginx/html/controller_content/
+COPY controller_content/favicon.ico /usr/share/nginx/html/controller_content/
+COPY controller_content/games/ /usr/share/nginx/html/controller_content/games/
+# --- END CORRECTION ---
+
+# Expose the ports that Nginx will be listening on
+EXPOSE 8441
+EXPOSE 8442
+
+# Command to run Nginx when the container starts
+CMD ["nginx", "-g", "daemon off;"]
+

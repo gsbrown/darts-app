@@ -1,0 +1,64 @@
+<?xml version="1.0"?>
+<Container version="2">
+  <Name>Darts Scoring App</Name>
+  <Repository>brownstein72/darts-frontends</Repository> <!-- Main repo for display icon etc. -->
+  <Registry>https://hub.docker.com/r/brownstein72</Registry>
+  <Network>bridge</Network>
+  <Privileged>false</Privileged>
+  <SupportURL>https://github.com/gsbrown/darts-app</SupportURL> <!-- Updated to your GitHub repo -->
+  <ProjectPage>https://github.com/gsbrown/darts-app</ProjectPage> <!-- Updated to your GitHub repo -->
+  <Overview>
+    The Darts Scoring App provides a comprehensive solution for managing darts games with real-time display and mobile control.
+    This Unraid template simplifies deployment by orchestrating two core Docker containers:
+    
+    1.  **Node.js Backend:** Handles all game logic, player management, and real-time communication. Player data (names, scores) is persistently stored via a bind-mounted volume, ensuring your progress is saved across restarts.
+    2.  **Nginx Frontend:** Serves two distinct web interfaces from a single container:
+        * **Display UI (Port 8441):** Designed for a large screen, showing game scores and progress in real-time.
+        * **Controller UI (Port 8442):** Optimized for mobile phones, allowing players to input scores and control game flow remotely.
+        
+    **Key Features:**
+    * **Multi-User &amp; Multi-Game:** Supports various popular darts game modes (Cricket, 501, 3 Friendly Flights, Baseball, BEERS, Golf, Killer, Around The World).
+    * **Real-time Updates:** Scores and game state update instantly across all connected displays and controllers.
+    * **Persistent Player Data:** Easily add, edit, and manage a list of players and teams that persist even if the container is restarted or recreated.
+    * **Portable Deployment:** Built with Docker, enabling easy deployment on any Linux machine (like your Unraid server or a dedicated Chromebox).
+    * **User-Friendly Control:** Intuitive mobile interface for seamless score entry and game management.
+    
+    **Requirements:**
+    This template utilizes Docker Compose for orchestration. Please ensure Docker Compose is installed and functional on your Unraid server (often available via Unraid's Community Applications plugin or manual CLI installation). You will need to configure host paths for player data and frontend content to enable persistence and customization.
+  </Overview>
+  <Category>GameServer:Other</Category>
+  <WebUI>http://[IP]:8441</WebUI>
+  <Icon>https://raw.githubusercontent.com/gsbrown/darts-app/main/darts-app.png</Icon> <!-- Updated to your GitHub repo icon path -->
+  <ExtraParams>--restart unless-stopped</ExtraParams>
+  <Config Name="Backend Container Name" Target="backend" Default="darts-backend-service" Mode="c" Description="Name of the backend service container." Type="Container" Display="always" Required="true"/>
+  <Config Name="Frontend Container Name" Target="frontends" Default="darts-frontends-service" Mode="c" Description="Name of the frontend service container." Type="Container" Display="always" Required="true"/>
+
+  <!-- Docker Compose Specific Configuration -->
+  <Config Name="Docker Compose File Path" Target="/mnt/user/appdata/DartsApp/docker-compose.yml" Default="/mnt/user/appdata/DartsApp/docker-compose.yml" Mode="c" Description="Absolute path to the docker-compose.yml file on your Unraid host. This file will be created/managed by this template." Type="Path" Display="always" Required="true" Mask="false"/>
+
+  <!-- Backend Service Definition -->
+  <Config Name="Backend Image" Target="brownstein72/darts-backend:latest" Default="brownstein72/darts-backend:latest" Mode="c" Description="Docker image for the backend service." Type="Image" Display="always" Required="true"/>
+  <Config Name="Backend Port (8046)" Target="8046" Default="8046" Mode="p" Description="Host port for the backend service." Type="Port" Display="always" Required="true"/>
+  <Config Name="Backend Player Data Path" Target="/usr/src/app/persistent_players.json" Default="/mnt/user/appdata/DartsAppBackendData/persistent_players.json" Mode="rw" Description="Host path for persistent_players.json data file. IMPORTANT: The directory MUST exist: e.g. /mnt/user/appdata/DartsAppBackendData/ AND ensure it's writable by container user (UID/GID 1000)." Type="Path" Display="always" Required="true"/>
+
+  <!-- Frontend Service Definition -->
+  <Config Name="Frontend Image" Target="brownstein72/darts-frontends:latest" Default="brownstein72/darts-frontends:latest" Mode="c" Description="Docker image for the frontend service." Type="Image" Display="always" Required="true"/>
+  <Config Name="Display Port (8441)" Target="8441" Default="8441" Mode="p" Description="Host port for the Darts Display frontend." Type="Port" Display="always" Required="true"/>
+  <Config Name="Controller Port (8442)" Target="8442" Default="8442" Mode="p" Description="Host port for the Darts Controller frontend." Type="Port" Display="always" Required="true"/>
+  <Config Name="Frontend Nginx Config Path" Target="/etc/nginx/conf.d/" Default="/mnt/user/appdata/DartsAppFrontends/conf/" Mode="rw" Description="Host path for Nginx configuration. IMPORTANT: The directory MUST exist: e.g. /mnt/user/appdata/DartsAppFrontends/conf/" Type="Path" Display="advanced" Required="true"/>
+  <Config Name="Frontend Display Content Path" Target="/usr/share/nginx/html/display_content/" Default="/mnt/user/appdata/DartsAppFrontends/display_content/" Mode="rw" Description="Host path for Display frontend content. IMPORTANT: The directory MUST exist: e.g. /mnt/user/appdata/DartsAppFrontends/display_content/" Type="Path" Display="advanced" Required="true"/>
+  <Config Name="Frontend Controller Content Path" Target="/usr/share/nginx/html/controller_content/" Default="/mnt/user/appdata/DartsAppFrontends/controller_content/" Mode="rw" Description="Host path for Controller frontend content. IMPORTANT: The directory MUST exist: e.g. /mnt/user/appdata/DartsAppFrontends/controller_content/" Type="Path" Display="advanced" Required="true"/>
+
+  <!-- Docker Compose specific entry point for starting the project -->
+  <!-- This assumes the user has docker-compose installed and working on Unraid -->
+  <!-- Build arguments for UID/GID for portable permissions -->
+  <Config Name="Host User UID" Target="HOST_UID" Default="1000" Mode="e" Description="UID of the host user that needs write access to mounted volumes (e.g., persistent_players.json). Default is 1000 (common for 'docker' user)." Type="Variable" Display="advanced" Required="true"/>
+  <Config Name="Host User GID" Target="HOST_GID" Default="1000" Mode="e" Description="GID of the host user that needs write access to mounted volumes. Default is 1000 (common for 'users' or 'docker' group)." Type="Variable" Display="advanced" Required="true"/>
+  
+  <Config Name="Docker Compose Up Command" Target="/usr/local/bin/docker-compose up -d" Default="/usr/local/bin/docker-compose up -d" Mode="e" Description="Command to start Docker Compose services." Type="Command" Display="always" Required="true"/>
+  <Config Name="Docker Compose Down Command" Target="/usr/local/bin/docker-compose down" Default="/usr/local/bin/docker-compose down" Mode="e" Description="Command to stop Docker Compose services." Type="Command" Display="advanced" Required="true"/>
+
+  <!-- Hidden configs for internal use or simple template -->
+  <Config Name="Dummy Container (for template visibility)" Target="dummy" Default="dummy" Mode="c" Description="This is a dummy container to make the template appear. Not part of the actual app." Type="Container" Display="hidden" Required="false"/>
+  <Config Name="Dummy Image" Target="alpine/git" Default="alpine/git" Mode="c" Description="Dummy image for the hidden container." Type="Image" Display="hidden" Required="false"/>
+</Container>

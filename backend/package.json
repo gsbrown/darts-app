@@ -1,0 +1,17 @@
+{
+  "name": "dartdisplayv2_backend",
+  "version": "1.0.0",
+  "main": "server_v2.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "description": "",
+  "dependencies": {
+    "express": "^5.1.0",
+    "socket.io": "^4.8.1",
+    "uuid": "^11.1.0"
+  }
+}

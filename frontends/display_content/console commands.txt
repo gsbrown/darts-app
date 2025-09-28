@@ -1,0 +1,22 @@
+Prune docker
+docker system prune -af --volumes
+
+
+1. frontend:
+cd .. && cd mnt/user/appdata/DartDisplay
+npm run build && cp -R /mnt/user/appdata/DartDisplay/build/* /mnt/user/appdata/darts-game-server/public/ && docker build -t brownstein72/burnt-edge:latest . && docker push brownstein72/burnt-edge:latest && docker restart DartDisplay
+
+2. backend:
+cd .. && cd mnt/user/appdata/darts-game-server
+docker build -t brownstein72/darts-game-server:latest . && docker push brownstein72/darts-game-server:latest && docker restart DartsGameServer
+
+
+v2
+1. start backend
+cd .. && cd mnt/user/appdata/DartDisplayV2_backend
+docker build -t darts-backend:latest .
+node server_v2.js
+
+controller
+cd /mnt/user/appdata/DartDisplayV2_controller
+docker build -f Dockerfile.controller -t mylocal-darts-controller:latest .

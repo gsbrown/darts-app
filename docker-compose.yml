@@ -1,0 +1,40 @@
+version: '3.8'
+
+services:
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile.backend
+      args:
+        HOST_UID: ${UID:-1000}
+        HOST_GID: ${GID:-1000}
+    container_name: darts-backend-service
+    # CHANGE 1: Removed 'network_mode: host' and added this service to the bridge network.
+    ports:
+      # This still exposes the backend port to your host for cloudflared.
+      - "8046:8046"
+    networks:
+      - darts_network
+    volumes:
+      - ./darts_data:/usr/src/app/data
+    restart: unless-stopped
+
+  frontends:
+    build:
+      context: ./frontends
+      dockerfile: Dockerfile.frontends
+    container_name: darts-frontends-service
+    ports:
+      # These ports are correct from our last change.
+      - "8441:8441"
+      - "8442:8442"
+    networks:
+      - darts_network
+    depends_on:
+      - backend
+    restart: unless-stopped
+
+networks:
+  darts_network:
+    driver: bridge
+

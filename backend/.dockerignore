@@ -1,0 +1,12 @@
+# Exclude node_modules, which should be installed inside the container
+node_modules
+
+# Exclude local development files and logs
+npm-debug.log
+.env
+
+# CRITICAL: Exclude the data directory and the persistent players file
+# This prevents your local data from being copied into the Docker image.
+# The data will be managed exclusively by the volume mount in docker-compose.
+data/
+persistent_players.json

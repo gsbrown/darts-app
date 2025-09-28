@@ -1,0 +1,23 @@
+{
+  "name": "dart-display-frontend",
+  "version": "1.0.0",
+  "description": "Main display for Darts Scoring App",
+  "scripts": {
+    "dev": "parcel index.html --dist-dir dev_dist --public-url ./",
+    "build": "parcel build index.html --dist-dir public --public-url ./"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "devDependencies": {
+    "@babel/core": "^7.24.0",
+    "@babel/preset-env": "^7.24.0",
+    "@babel/preset-react": "^7.24.0",
+    "parcel": "^2.12.0"
+  },
+  "dependencies": {
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0",
+    "socket.io-client": "^4.7.5" 
+  }
+}

@@ -1,0 +1,31 @@
+    #!/bin/sh
+
+    # This script runs when the container starts.
+    # Its purpose is to ensure correct permissions for mounted volumes.
+
+    # Check if the persistent_players.json file is mounted and owned by root (default for Docker bind mounts).
+    # If it is, chown it to the appuser's UID/GID.
+    # This addresses the permission denied error on bind mounts.
+    # We find the UID/GID of appuser from within the running container context.
+
+    # Check if the file exists and is not a directory, and is mounted from host.
+    # We assume /usr/src/app/persistent_players.json is the target mount point.
+    if [ -f "/usr/src/app/persistent_players.json" ]; then
+        # Get the UID and GID of the 'appuser' within the container
+        APP_UID=$(id -u appuser)
+        APP_GID=$(id -g appuser)
+
+        # Change ownership of the mounted file to the appuser's UID/GID
+        # This allows the appuser to write to the file.
+        # -h is for symlinks, but for bind mounts, it directly changes owner of the target file.
+        chown "$APP_UID:$APP_GID" /usr/src/app/persistent_players.json
+        echo "Changed ownership of /usr/src/app/persistent_players.json to $APP_UID:$APP_GID"
+    else
+        echo "persistent_players.json not found or not a file at /usr/src/app/persistent_players.json. Skipping chown."
+        # If the file doesn't exist, it will be created by the app, and Docker will create it
+        # with permissions matching the container's user.
+    fi
+
+    # Execute the main command from the Dockerfile's CMD instruction
+    exec "$@"
+    
